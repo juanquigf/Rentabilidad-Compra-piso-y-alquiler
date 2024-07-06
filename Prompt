@@ -2,41 +2,11 @@ import numpy as np
 import numpy_financial as npf
 import pandas as pd
 
-def calcular_rentabilidad():
-    # Función para capturar y convertir entradas numéricas
-    def input_float(prompt):
-        return float(input(prompt).replace(',', '.'))
+def calcular_rentabilidad(valor_piso, pago_inicial, reforma_muebles, itp, gestion_notaria,
+                          seguro_impago, seguro_vivienda, ibi, comunidad, valor_hipoteca,
+                          plazo_anios, tipo_interes, num_habitaciones, precio_habitacion, irpf,
+                          vender_inmueble, anos_venta=0):
 
-    def input_int(prompt):
-        return int(input(prompt))
-
-    # Capturar datos de entrada
-    valor_piso = input_float("Ingrese el valor del piso: ")
-    pago_inicial = input_float("Ingrese el 10% del valor del piso: ")
-    reforma_muebles = input_float("Ingrese el costo de reforma y muebles: ")
-    itp = input_float("Ingrese el ITP: ")
-    gestion_notaria = input_float("Ingrese los costos de gestión y notaría: ")
-
-    seguro_impago = input_float("Ingrese el seguro de impago y ocupación: ")
-    seguro_vivienda = input_float("Ingrese el seguro de vivienda: ")
-    ibi = input_float("Ingrese el IBI: ")
-    comunidad = input_float("Ingrese el costo de la comunidad: ")
-
-    valor_hipoteca = input_float("Ingrese el valor de la hipoteca: ")
-    plazo_anios = input_int("Ingrese el plazo de la hipoteca en años: ")
-    tipo_interes = input_float("Ingrese el tipo de interés anual: ")
-
-    num_habitaciones = input_int("Ingrese el número de habitaciones: ")
-    precio_habitacion = input_float("Ingrese el precio por habitación: ")
-    irpf = input_float("Ingrese el porcentaje de IRPF: ")
-
-    vender_inmueble = input("¿Planeas vender el inmueble? (Si/No): ")
-    if vender_inmueble.lower() == "si":
-        anos_venta = input_int("¿En cuántos años planeas vender el inmueble?: ")
-    else:
-        anos_venta = 0
-
-    # Cálculos
     total_inversion = pago_inicial + reforma_muebles + itp + gestion_notaria
     total_otros_gastos = seguro_impago + seguro_vivienda + ibi + comunidad
 
@@ -51,19 +21,23 @@ def calcular_rentabilidad():
     beneficio_anual = alquiler_neto - cuota_anual - total_otros_gastos
     beneficio_mensual = beneficio_anual / 12
 
-    # Cálculo de la rentabilidad y la TIR
     inversion_inicial = total_inversion
 
-    if anos_venta > 0:
-        flujos_de_caja = [-inversion_inicial] + [beneficio_anual] * (anos_venta - 1) + [beneficio_anual + valor_piso]
-        liquido_final = beneficio_anual * anos_venta + valor_piso - total_inversion
+    flujos_de_caja = [-inversion_inicial]
+
+    if vender_inmueble.lower() == "si" and anos_venta > 0:
+        for i in range(anos_venta):
+            flujos_de_caja.append(beneficio_anual)
+        flujo_venta = beneficio_anual + valor_piso - valor_hipoteca * (1 - anos_venta / plazo_anios)
+        flujos_de_caja.append(flujo_venta)
+        liquido_final = sum(flujos_de_caja)
     else:
-        flujos_de_caja = [-inversion_inicial] + [beneficio_anual] * plazo_anios
-        liquido_final = beneficio_anual * plazo_anios - total_inversion
+        for i in range(plazo_anios):
+            flujos_de_caja.append(beneficio_anual)
+        liquido_final = sum(flujos_de_caja)
 
     tir = npf.irr(flujos_de_caja) * 100
 
-    # Crear DataFrame de resultados
     resultados = {
         "Descripción": ["Inversión Inicial", "Cuota Mensual", "Cuota Anual", "Valor Final de la Compra",
                         "Intereses Pagados", "Ingresos Mensuales por Alquiler", "Ingresos Anuales por Alquiler",
@@ -73,7 +47,7 @@ def calcular_rentabilidad():
                   f"{beneficio_anual:.2f}", f"{beneficio_mensual:.2f}"]
     }
 
-    if anos_venta > 0:
+    if vender_inmueble.lower() == "si" and anos_venta > 0:
         resultados["Descripción"].append("Años hasta la Venta")
         resultados["Valor"].append(anos_venta)
         resultados["Descripción"].append("Líquido Final al Vender")
@@ -84,9 +58,39 @@ def calcular_rentabilidad():
 
     df_resultados = pd.DataFrame(resultados)
 
-    # Mostrar resultados
     print("\nResultados:")
     print(df_resultados)
+    return df_resultados
 
-# Ejecutar la función
-calcular_rentabilidad()
+def input_float(prompt):
+    return float(input(prompt).replace(',', '.'))
+
+def input_int(prompt):
+    return int(input(prompt))
+
+if __name__ == "__main__":
+    valor_piso = input_float("Ingrese el valor del piso: ")
+    pago_inicial = input_float("Ingrese el 10% del valor del piso: ")
+    reforma_muebles = input_float("Ingrese el costo de reforma y muebles: ")
+    itp = input_float("Ingrese el ITP: ")
+    gestion_notaria = input_float("Ingrese los costos de gestión y notaría: ")
+    seguro_impago = input_float("Ingrese el seguro de impago y ocupación: ")
+    seguro_vivienda = input_float("Ingrese el seguro de vivienda: ")
+    ibi = input_float("Ingrese el IBI: ")
+    comunidad = input_float("Ingrese el costo de la comunidad: ")
+    valor_hipoteca = input_float("Ingrese el valor de la hipoteca: ")
+    plazo_anios = input_int("Ingrese el plazo de la hipoteca en años: ")
+    tipo_interes = input_float("Ingrese el tipo de interés anual: ")
+    num_habitaciones = input_int("Ingrese el número de habitaciones: ")
+    precio_habitacion = input_float("Ingrese el precio por habitación: ")
+    irpf = input_float("Ingrese el porcentaje de IRPF: ")
+    vender_inmueble = input("¿Planeas vender el inmueble? (Si/No): ")
+    if vender_inmueble.lower() == "si":
+        anos_venta = input_int("¿En cuántos años planeas vender el inmueble?: ")
+    else:
+        anos_venta = 0
+
+    calcular_rentabilidad(valor_piso, pago_inicial, reforma_muebles, itp, gestion_notaria,
+                          seguro_impago, seguro_vivienda, ibi, comunidad, valor_hipoteca,
+                          plazo_anios, tipo_interes, num_habitaciones, precio_habitacion, irpf,
+                          vender_inmueble, anos_venta)
